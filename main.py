@@ -122,6 +122,11 @@ def convert_to_dataframe(month_data):
     # sort chaplains alphabetically
     dataframe.sort_index(inplace=True)
 
+    # activities sum per chaplain
+    index = ord(MAX_ACTIVITY_LETTER) - ord('A')
+    values = dataframe.loc[:, 'A':MAX_ACTIVITY_LETTER].sum(axis=1)
+    dataframe.insert(index, 'Activity Total', values)
+
     # Total sum per column:
     dataframe.loc['Total', :] = dataframe.sum(axis=0)
 
@@ -129,27 +134,52 @@ def convert_to_dataframe(month_data):
 
 
 def format_table(sheet):
-    table_range = sheet.range('A1').expand()
     sheet.autofit()
-    table_range.api.WrapText = False
+
+    # the whole table
+    table_range = sheet.range('A1').expand()
     table_range.api.HorizontalAlignment = xw.constants.Constants.xlCenter
+    table_range.api.VerticalAlignment = xw.constants.Constants.xlCenter
+    table_range.api.Borders.LineStyle = xw.constants.LineStyle.xlContinuous
+    table_range.api.Borders.Color = xw.constants.RgbColor.rgbLightGray
     table_range.color = (0, 170, 240)
 
+    column_length = table_range.shape[0]
+    row_length = table_range.shape[1]
+
+    # the header
+    header = sheet.range((1, 1), (1, row_length))
+    header.api.Font.Bold = True
+
+    # the total row
     if sheet.range('A3').value is not None:
-        total_row_range = sheet.range('A2').end('down').expand('right')
+        total_row_range = sheet.range((column_length, 1), (column_length, row_length))
     else:
         # if there is no data for this month, the 'total' row will be on row 2
-        total_row_range = sheet.range('A2').expand('right')
+        total_row_range = sheet.range((2, 1), (2, row_length))
     total_row_range.color = (255, 150, 100)
+
+    # notes and stories
+    # (assumes these columns are on the end)
+    notes_and_stories = sheet.range((1, row_length - 1), (column_length, row_length))
+    notes_and_stories.column_width = 80
+    notes_and_stories.api.WrapText = True
+    notes_and_stories.api.HorizontalAlignment = xw.constants.Constants.xlLeft
+    notes_and_stories.api.VerticalAlignment = xw.constants.Constants.xlCenter
 
 
 def save_output_spreadsheet(book, name):
     pathlib.Path(OUTPUT_SHEET_FOLDER_PATH).mkdir(parents=True, exist_ok=True)
+    file_path = OUTPUT_SHEET_FOLDER_PATH + "/{}_summary.xlsx".format(name)
 
+    # if an old version of this spreadsheet is open, connect to and close it so it can be overwritten
     try:
-        book.save(OUTPUT_SHEET_FOLDER_PATH + "/{}_summary.xlsx".format(name))
-    except Exception:
-        raise Exception("Error saving file! Make sure no spreadsheet is open with the name {}.xlsx".format(name))
+        open_book = xw.Book(file_path)
+        open_book.close()
+    except FileNotFoundError:
+        pass
+
+    book.save(file_path)
 
 
 def main():
