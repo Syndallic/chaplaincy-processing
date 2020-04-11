@@ -71,8 +71,12 @@ def add_activities(chaplain_dict, activities):
         current_char = activities[i]
         if current_char.isdigit():
             current_multiplier = int(current_char)
-        elif current_char.isalpha() and \
-                (ord(current_char) <= ord(MAX_ACTIVITY_LETTER) or current_char in ['S', 'P']):
+        elif current_char in ['S', 'P']:
+            chaplain_dict['Activities'][current_char] += current_multiplier
+        elif current_char.isalpha():
+            # if invalid character, just default to Q
+            if ord(current_char) > ord(MAX_ACTIVITY_LETTER):
+                current_char = "Q"
             chaplain_dict['Activities'][current_char] += current_multiplier
         else:
             raise ValueError(current_char)
@@ -183,7 +187,8 @@ def save_output_spreadsheet(book, name):
 
 
 def main():
-    time_sheet = xw.Book(TIME_SHEET_PATH).sheets[0]
+    time_sheet_book = xw.Book(TIME_SHEET_PATH)
+    time_sheet = time_sheet_book.sheets[0]
     data = get_time_sheet_data(time_sheet)
     year = get_time_sheet_year(time_sheet)
 
@@ -218,6 +223,8 @@ def main():
     format_table(output_book.sheets[0])
 
     save_output_spreadsheet(output_book, year)
+
+    time_sheet_book.close()
 
 
 if __name__ == "__main__":
