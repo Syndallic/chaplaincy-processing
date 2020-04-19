@@ -1,10 +1,11 @@
 import pathlib
+import re
 from collections import defaultdict
 
 import pandas as pd
 import xlwings as xw
 
-MAX_ACTIVITY_LETTER = 'Q'
+MAX_ACTIVITY_LETTER = 'R'
 TIME_SHEET_PATH = 'data/Time Sheets.csv'
 OUTPUT_SHEET_FOLDER_PATH = 'output'
 
@@ -48,38 +49,68 @@ def get_time_sheet_data(time_sheet):
         notes = time_sheet.range((i, 5)).value
         story = time_sheet.range((i, 6)).value
 
-        try:
-            add_activities(data[month][name], activities)
-        except ValueError as e:
-            raise ValueError("Warning: Invalid character '{}' found on row {}, column 3.".format(e.args[0], i))
+        activities = clean_activities_string(activities)
+
+        if invalid_syntax_in_activities(activities):
+            # mark as red if problem
+            time_sheet.range((i, 3)).color = (255, 0, 0)
+        else:
+            try:
+                add_activities(data[month][name], activities)
+            except ValueError as e:
+                raise ValueError("Warning: Invalid character '{}' found on row {}, column 3.".format(e.args[0], i))
         add_notes(data[month][name], notes)
         add_story(data[month][name], story)
 
     return data
 
 
+def clean_activities_string(activities_string):
+    activities_string = activities_string.replace(',', '')
+    activities_string = activities_string.replace(' ', '')
+    activities_string = activities_string.replace('\n', '')
+    activities_string = activities_string.upper()
+    return activities_string
+
+
+def invalid_syntax_in_activities(activities_string):
+    valid_characters = set(map(chr, range(ord('A'), ord(MAX_ACTIVITY_LETTER) + 1)))
+    valid_characters.update(['S', 'P'])
+    valid_characters.update(set(map(str, range(10))))
+    if not set(activities_string).issubset(valid_characters):
+        return True
+    # searches for a digit followed by something that isn't a digit or letter
+    if re.search("\d[^A-Z0-9]", activities_string) is not None:
+        return True
+
+    return False
+
+
 def add_activities(chaplain_dict, activities):
     if 'Activities' not in chaplain_dict:
         chaplain_dict['Activities'] = defaultdict(int)
 
-    activities = activities.replace(',', '')
-    activities = activities.replace(' ', '')
-    activities = activities.upper()
     current_multiplier = 0
 
-    for i in range(len(activities)):
+    i = 0
+    while i < len(activities):
         current_char = activities[i]
         if current_char.isdigit():
-            current_multiplier = int(current_char)
+            # this could be the beginning of a multi-digit number
+            numbers_in_string = re.findall(r'\d+', activities[i:])
+            current_multiplier = int(numbers_in_string[0])
+            i += len(numbers_in_string[0]) - 1
         elif current_char in ['S', 'P']:
             chaplain_dict['Activities'][current_char] += current_multiplier
         elif current_char.isalpha():
-            # if invalid character, just default to Q
+            # if invalid character, just default to R
             if ord(current_char) > ord(MAX_ACTIVITY_LETTER):
-                current_char = "Q"
+                current_char = 'R'
             chaplain_dict['Activities'][current_char] += current_multiplier
         else:
             raise ValueError(current_char)
+
+        i += 1
 
 
 def add_notes(chaplain_dict, notes):
