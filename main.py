@@ -54,6 +54,8 @@ def get_time_sheet_data(time_sheet):
         if invalid_syntax_in_activities(activities):
             # mark as red if problem
             time_sheet.range((i, 3)).color = (255, 0, 0)
+            if 'Activities' not in data[month][name]:
+                data[month][name]['Activities'] = defaultdict(int)
         else:
             try:
                 add_activities(data[month][name], activities)
