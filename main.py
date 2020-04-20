@@ -71,6 +71,10 @@ def clean_activities_string(activities_string):
     activities_string = activities_string.replace(',', '')
     activities_string = activities_string.replace(' ', '')
     activities_string = activities_string.replace('\n', '')
+    activities_string = activities_string.replace('\\', '')
+    activities_string = activities_string.replace('/', '')
+    activities_string = activities_string.replace(':', '')
+    activities_string = activities_string.replace('.', '')
     activities_string = activities_string.upper()
     return activities_string
 
