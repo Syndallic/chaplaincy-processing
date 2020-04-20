@@ -237,7 +237,8 @@ def main():
         output_sheet.range('A1').value = dataframe
         format_table(output_sheet)
 
-    output_book.sheets[0].name = "Summary"
+    summary_sheet = output_book.sheets[0]
+    summary_sheet.name = "Summary"
 
     summary_dataframe = pd.concat(dataframes)
     summary_dataframe['Notes'] = summary_dataframe['Notes'].replace(0, "")
@@ -252,8 +253,9 @@ def main():
     summary_dataframe = summary_dataframe.assign(Notes=notes)
     summary_dataframe = summary_dataframe.assign(Stories=stories)
 
-    output_book.sheets[0].range('A1').value = summary_dataframe
-    format_table(output_book.sheets[0])
+    summary_sheet.range('A1').value = summary_dataframe
+    format_table(summary_sheet)
+    summary_sheet.activate()
 
     save_output_spreadsheet(output_book, year)
 
